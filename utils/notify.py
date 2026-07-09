@@ -26,6 +26,7 @@ class NotificationKit:
 		self.telegram_chat_id = os.getenv('TELEGRAM_CHAT_ID')
 		self.bark_key = os.getenv('BARK_KEY')
 		self.bark_server = os.getenv('BARK_SERVER', 'https://api.day.app')
+		self.push_me_key = os.getenv('PUSH_ME_KEY')
 
 	def _post_json(self, service: str, url: str, data: dict[str, Any]) -> httpx.Response:
 		with httpx.Client(timeout=30.0) as client:
@@ -156,7 +157,12 @@ class NotificationKit:
 		}
 
 		self._post_json('Bark', url, data)
+	def send_push_me(self, title: str, content: str):
+		if not self.push_me_key:
+			raise ValueError('PushMe key not configured')
 
+		data = {'push_key': self.push_me_key, 'title': title, 'content': content}
+		self._post_json('PushMe', 'www.pushplus.plus', data)
 	def push_message(self, title: str, content: str, msg_type: Literal['text', 'html'] = 'text'):
 		notifications = [
 			('Email', lambda: self.send_email(title, content, msg_type)),
@@ -168,6 +174,7 @@ class NotificationKit:
 			('Gotify', lambda: self.send_gotify(title, content)),
 			('Telegram', lambda: self.send_telegram(title, content)),
 			('Bark', lambda: self.send_bark(title, content)),
+			('PushMe', lambda: self.send_push_me(title, content)),
 		]
 
 		for name, func in notifications:
